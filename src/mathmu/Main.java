@@ -16,6 +16,7 @@ public class Main {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
+    	System.out.println(args[0]);
         Core core = new Core();
         core.start();
         try {
@@ -26,6 +27,10 @@ public class Main {
         } finally{            
             core.end();
         }
+    }
+    
+    public static void parseConfig(){
+    	
     }
 
 }

@@ -38,10 +38,10 @@ public class Client {
     class Runner extends Thread{
         @Override
         public void run(){
-            while (true){
+//            while (true){
                 try {
                     logger.info("Start trying to connect to " + addr.getHostAddress() + ":" + port);
-                    socket = new Socket(addr, port);                    
+                    socket = new Socket(addr, port);
                     logger.info("Client connected @" + addr.getHostAddress() + ":" + port);
                     in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                     out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())), true);
@@ -56,7 +56,7 @@ public class Client {
                 } catch (IOException ex) {
                     logger.log(Level.SEVERE, null, ex);                    
                 }
-            }
+//            }
         }
     }
 
@@ -71,7 +71,7 @@ public class Client {
         this.port = port;
         addr = InetAddress.getByName(ip);
         runner = new Runner();
-        runner.start();        
+        runner.start();
     }
 
     public void addNewTaskFinishCallback(ClientCallback ntf){
