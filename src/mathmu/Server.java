@@ -38,19 +38,21 @@ public class Server implements MsgHandle{
     	@Override
     	public void run(){
     		String s=null;
-    		while(true){
-    			try{
-    				s=in.readLine();
-    			}catch(IOException e){
-    				s=null;
-    				logger.log(Level.SEVERE, null, e);
-    				continue;
-    			}
-    			mh.handleMsg(s);
-    		}
+    		if(in!=null)
+	    		while(true){
+	    			try{
+	    				s=in.readLine();
+	    			}catch(IOException e){
+	    				s=null;
+	    				logger.log(Level.SEVERE, null, e);
+	    				break;
+	    			}
+	    			mh.handleMsg(s);
+	    		}
     	}
     }
     class WelcomeService extends Thread{
+    	List<WatchDog> dogs=new ArrayList();
         @Override
         public void run(){
             while (true){
@@ -62,8 +64,19 @@ public class Server implements MsgHandle{
                 } catch (IOException ex) {
                     logger.log(Level.SEVERE, null, ex);
                 }
-                new WatchDog(in,self).start();
+                WatchDog d=new WatchDog(in,self);
+                dogs.add(d);
+                d.start();
             }
+        }
+        
+        @Override
+        public void interrupt(){
+        	super.interrupt();
+        	for(WatchDog d:dogs){
+        		d.interrupt();
+        	}
+        	dogs.clear();
         }
     }
     public Server(int port) throws IOException{
@@ -83,7 +96,7 @@ public class Server implements MsgHandle{
     }
 
     public boolean startListen(){
-        endListen();        
+        endListen();
         runner = new WelcomeService();
         runner.start();
         return true;
@@ -123,8 +136,15 @@ public class Server implements MsgHandle{
     }
     
     public void handleMsg(String s){
+    	if(s==null)return;
+    	logger.info("handleMsg: "+s);
     	if (s.contains("addNode")){//control command
             try{
+            	String[]ary=s.split("[ ]");
+            	if(ary.length<3){
+            		logger.info("invalid command: "+s);
+            		return;
+            	}
                 String ip = s.split("[ ]")[1];
                 int port = Integer.parseInt(s.split("[ ]")[2]);
                 String name = "";
@@ -135,7 +155,9 @@ public class Server implements MsgHandle{
             }catch(Exception e){
                 logger.log(Level.SEVERE, null, e);
             }
-        }else{//task dispatch
+            return;
+        }
+    	{//task dispatch
             Task task = new Task(s);
             for (ServerCallback nta : callbacks) nta.arrive(task);
         }

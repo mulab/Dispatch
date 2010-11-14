@@ -24,7 +24,7 @@
         </javac>
     </target>
 	<target name="2 pack" depends="1 build" description="gen jar...">
-		<jar destfile="bin/dispatch.jar">
+		<jar destfile="dispatch.jar">
 			<fileset dir="${basedir}" includes="src/**" />
 			<fileset dir="bin"/>
 			<manifest>
