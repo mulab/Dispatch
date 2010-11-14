@@ -1,4 +1,3 @@
-
 package mathmu;
 
 import java.io.BufferedReader;
@@ -15,23 +14,43 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import mathmu.data.Task;
-import mathmu.interf.ServerCallback;
+import mathmu.interf.*;
 
-/**
- *
- * @author XiaoR
- */
-public class Server {
+public class Server implements MsgHandle{
     private static Logger logger =  Logger.getLogger(Server.class.getName());
     private ServerSocket ss = null;
     private int listenPort = -1;
     private List<ServerCallback> callbacks;
-    private Runner runner;
+    private WelcomeService runner;
     private boolean isConnected;
     private PrintWriter out;
     private BufferedReader in;
     private Socket socket;
-    class Runner extends Thread{
+    private Server self=this;
+    
+    class WatchDog extends Thread{
+    	private BufferedReader in;
+    	private MsgHandle mh;
+    	public WatchDog(BufferedReader vin,MsgHandle vmh){
+    		in=vin;
+    		mh=vmh;
+    	}
+    	@Override
+    	public void run(){
+    		String s=null;
+    		while(true){
+    			try{
+    				s=in.readLine();
+    			}catch(IOException e){
+    				s=null;
+    				logger.log(Level.SEVERE, null, e);
+    				continue;
+    			}
+    			mh.handleMsg(s);
+    		}
+    	}
+    }
+    class WelcomeService extends Thread{
         @Override
         public void run(){
             while (true){
@@ -43,36 +62,7 @@ public class Server {
                 } catch (IOException ex) {
                     logger.log(Level.SEVERE, null, ex);
                 }
-                isConnected = true;
-                String recv;
-                try {
-                    recv = in.readLine();
-                    if (recv == null) {
-                        isConnected = false;
-                        logger.info("Server Connect failed!");
-                        continue;
-                    }
-                } catch (IOException ex) {
-                    logger.log(Level.SEVERE, null, ex);
-                    continue;
-                }
-                if (recv.contains("addNode")){
-                    try{
-                        String ip = recv.split("[ ]")[1];
-                        int port = Integer.parseInt(recv.split("[ ]")[2]);
-                        String name = "";
-                        if (recv.split("[ ]").length > 3){
-                            name = recv.split("[ ]")[3];
-                        }
-                        for (ServerCallback nta : callbacks) nta.addNode(ip, port, name);
-                    }catch(Exception e){
-                        logger.log(Level.SEVERE, null, e);
-                    }
-                }else{
-                    Task task = new Task(recv);
-                    for (ServerCallback nta : callbacks) nta.arrive(task);
-                }
-                //for ()
+                new WatchDog(in,self).start();
             }
         }
     }
@@ -94,7 +84,7 @@ public class Server {
 
     public boolean startListen(){
         endListen();        
-        runner = new Runner();
+        runner = new WelcomeService();
         runner.start();
         return true;
     }
@@ -130,5 +120,24 @@ public class Server {
             return true;
         }
         return false;
+    }
+    
+    public void handleMsg(String s){
+    	if (s.contains("addNode")){//control command
+            try{
+                String ip = s.split("[ ]")[1];
+                int port = Integer.parseInt(s.split("[ ]")[2]);
+                String name = "";
+                if (s.split("[ ]").length > 3){
+                    name = s.split("[ ]")[3];
+                }
+                for (ServerCallback nta : callbacks) nta.addNode(ip, port, name);
+            }catch(Exception e){
+                logger.log(Level.SEVERE, null, e);
+            }
+        }else{//task dispatch
+            Task task = new Task(s);
+            for (ServerCallback nta : callbacks) nta.arrive(task);
+        }
     }
 }

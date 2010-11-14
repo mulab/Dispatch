@@ -1,5 +1,3 @@
-
-
 package mathmu;
 
 import java.io.IOException;
@@ -10,16 +8,10 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
 import mathmu.conf.Config;
 import mathmu.data.Task;
-import mathmu.interf.ClientCallback;
-import mathmu.interf.ServerCallback;
+import mathmu.interf.*;
 
-/**
- *
- * @author XiaoR
- */
 public class Core implements ServerCallback, ClientCallback{
     private static Logger logger = Logger.getLogger(Core.class.getName());
     private BlockingQueue<Task> waitList, doingList;

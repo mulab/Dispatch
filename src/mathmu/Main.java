@@ -12,11 +12,8 @@ import java.util.logging.Logger;
  */
 public class Main {
 
-    /**
-     * @param args the command line arguments
-     */
     public static void main(String[] args) {
-    	System.out.println(args[0]);
+    	if(args.length>0) System.out.println(args[0]);
         Core core = new Core();
         core.start();
         try {
@@ -24,7 +21,7 @@ public class Main {
             in.readLine();
         } catch (IOException ex) {
             Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
-        } finally{            
+        } finally{
             core.end();
         }
     }
