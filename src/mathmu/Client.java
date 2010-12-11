@@ -32,6 +32,7 @@ public class Client {
     private boolean isTasking;
     private Runner runner = null;
     private Long taskID = new Long(-1);	// if calc node return sth before asking him, then it will be treated as the -1 task
+    private Long ownerID= new Long(-1);
     private String name;
     private InetAddress addr;
     private int port;
@@ -59,7 +60,7 @@ public class Client {
                     	suicide();
                     	break;
                     }
-                    Task task = new Task(recv);
+                    Task task = new Task(recv, ownerID);
                     task.setId(taskID);
                     if(callbacks==null)ZLog.error("@Client.Runner.run::callbacks null");
                     else for (ClientCallback ntf : callbacks) ntf.taskFinish(task);
@@ -72,7 +73,7 @@ public class Client {
     }
 
     public String getName(){
-        return this.name;
+        return this.name+":"+port;
     }
 
     public Client(String ip, int port, String name) throws UnknownHostException {
@@ -130,7 +131,9 @@ public class Client {
             out.println(task.getExp());
             out.flush();
             taskID = task.getId();
+            ownerID = task.getOwner();
             isTasking = true;
+            ZLog.info("@Client.sendNewTask:: "+socket.getInetAddress()+":"+socket.getPort()+" get new task, owner: "+ownerID+" ,exp: "+task.getExp());
             return true;
         }
         return false;

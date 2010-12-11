@@ -7,6 +7,7 @@ public class Config {
 	// these are default values
     public static int ServerListenPort = 5010;
     public static int ClientSendPort = 5009;
+    public static int CORE_INTERVAL = 10;
     public static List<String> ClientIPList = new ArrayList();
     static{
     	ClientIPList.add("127.0.0.1");

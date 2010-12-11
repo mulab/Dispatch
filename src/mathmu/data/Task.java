@@ -10,14 +10,25 @@ import java.util.Date;
 public class Task {
     private String exp;
     private Long id;
+    private Long owner=new Long(-1);
 
     public Task(String exp){
         this.exp = exp;
         id = new Date().getTime();
     }
+    
+    public Task(String exp, Long ownerid){
+    	this.exp=exp;
+    	id = new Date().getTime();
+    	owner=ownerid;
+    }
 
     public Task(){
 
+    }
+    
+    public Long getOwner(){
+    	return owner;
     }
 
     public Long getId() {
@@ -46,5 +57,9 @@ public class Task {
         int hash = 7;
         hash = 13 * hash + (this.id != null ? this.id.hashCode() : 0);
         return hash;
+    }
+    
+    public void selfIntro(){
+    	System.out.println("hello, everyone, my owner is "+owner+", and my id is "+id+" , the exp is "+exp);
     }
 }

@@ -18,7 +18,7 @@ import mathmu.data.Task;
 import mathmu.interf.*;
 import mathmu.util.ZLog;
 
-public class Server implements MsgHandle{
+public class Server{
     private static Logger logger =  Logger.getLogger(Server.class.getName());
     private ServerSocket ss = null;
     private int listenPort = -1;
@@ -27,18 +27,18 @@ public class Server implements MsgHandle{
     private PrintWriter out;
     private BufferedReader in;
     private Socket socket;
-    private Server self=this;
     private HashMap<Long,PrintWriter> map=new HashMap();
+    private Long srcCnter=new Long(0);
     
     class WatchDog extends Thread{
+    	private Long src;
     	private BufferedReader win;
     	private PrintWriter wout;
-    	private MsgHandle wmh;
     	private Socket wskt;
-    	public WatchDog(BufferedReader vin,PrintWriter vout,MsgHandle vmh,Socket vsocket){
+    	public WatchDog(Long srcId, BufferedReader vin,PrintWriter vout,Socket vsocket){
+    		src=srcId;
     		win=vin;
     		wout=vout;
-    		wmh=vmh;
     		wskt=vsocket;
     	}
     	@Override
@@ -61,11 +61,10 @@ public class Server implements MsgHandle{
 	    				closeConnection();	    				
 	    				break;
 	    			}
-	    			wmh.handleMsg(s,wout);
+	    			handleMsg(s);
 	    		}
     	}
     	private void closeConnection(){
-    		ZLog.info("");
     		try{
 				wskt.close();
 				ZLog.info("@Server.WatchDog.closeConnection:: client "+wskt.getInetAddress()+":"+wskt.getPort()+" disconnected.");
@@ -73,23 +72,52 @@ public class Server implements MsgHandle{
 				ZLog.error("@Server.WatchDog.closeConnection:: nani? cannot close socket!");
 			}
     	}
+    	
+    	private void handleMsg(String s){
+        	if(s==null||s=="")return;
+        	ZLog.info("\n\n@Server.WatchDog.handleMsg: "+s);
+        	if (s.contains("addNode")){//control command
+                try{
+                	String[]ary=s.split("[ ]");
+                	if(ary.length<3){
+                		logger.info("invalid command: "+s);
+                		return;
+                	}
+                    String ip = ary[1];
+                    int port = Integer.parseInt(ary[2]);
+                    String name = ""+ip;
+                    if (ary.length > 3) name = ary[3];
+                    for (ServerCallback nta : callbacks) nta.addNode(ip, port, name);
+                }catch(Exception e){
+                    logger.log(Level.SEVERE, null, e);
+                }
+                return;
+            }else{					//task dispatch
+                Task task = new Task(s,src);
+                map.put(src, wout);
+                for (ServerCallback nta : callbacks) nta.arrive(task);
+            }
+        }
     }
     
     class WelcomeService extends Thread{	// accept socket connect and add a dog to handle
     	List<WatchDog> dogs=new ArrayList();
         @Override
         public void run(){
+        	Long srcid;
             while (true){
                 try {
                      socket = ss.accept();
                      logger.info("Server accept");
                      in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                      out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())), true);
+                     srcid=new Long(srcCnter);
+                     srcCnter++;
                 } catch (IOException ex) {
                     logger.log(Level.SEVERE, null, ex);
                     continue;
                 }
-                WatchDog d=new WatchDog(in,out,self,socket);
+                WatchDog d=new WatchDog(srcid, in,out,socket);
                 dogs.add(d);
                 d.start();
             }
@@ -151,7 +179,7 @@ public class Server implements MsgHandle{
     }
 
     public boolean sendResponse(Task t){
-    	PrintWriter pw=map.get(t.getId());
+    	PrintWriter pw=map.get(t.getOwner());
         if (pw != null){
             pw.println(t.getExp());
             pw.flush();
@@ -160,29 +188,5 @@ public class Server implements MsgHandle{
         return false;
     }
     
-    public void handleMsg(String s,PrintWriter ret){
-    	if(s==null||s=="")return;
-    	logger.info("handleMsg: "+s);
-    	if (s.contains("addNode")){//control command
-            try{
-            	String[]ary=s.split("[ ]");
-            	if(ary.length<3){
-            		logger.info("invalid command: "+s);
-            		return;
-            	}
-                String ip = ary[1];
-                int port = Integer.parseInt(ary[2]);
-                String name = ""+ip;
-                if (ary.length > 3) name = ary[3];
-                for (ServerCallback nta : callbacks) nta.addNode(ip, port, name);
-            }catch(Exception e){
-                logger.log(Level.SEVERE, null, e);
-            }
-            return;
-        }else{					//task dispatch
-            Task task = new Task(s);
-            map.put(task.getId(), ret);
-            for (ServerCallback nta : callbacks) nta.arrive(task);
-        }
-    }
+    
 }
