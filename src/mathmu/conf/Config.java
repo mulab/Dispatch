@@ -5,14 +5,15 @@ import java.util.List;
 
 public class Config {
 	// these are default values
-    public static int ServerListenPort = 5009;
+    public static int ServerListenPort = 5010;
     public static int ClientSendPort = 5009;
     public static List<String> ClientIPList = new ArrayList();
-//    static{
+    static{
+    	ClientIPList.add("127.0.0.1");
 //        ClientIPList.add("10.0.10.3");
 //        ClientIPList.add("10.0.10.4");
 //        ClientIPList.add("10.0.10.5");
-//    }
+    }
 
 
     public static int TASKQUEUE_CAPACITY = 10000;

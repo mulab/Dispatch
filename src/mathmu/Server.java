@@ -15,6 +15,7 @@ import java.util.logging.Logger;
 
 import mathmu.data.Task;
 import mathmu.interf.*;
+import mathmu.util.ZLog;
 
 public class Server implements MsgHandle{
     private static Logger logger =  Logger.getLogger(Server.class.getName());
@@ -31,27 +32,47 @@ public class Server implements MsgHandle{
     class WatchDog extends Thread{
     	private BufferedReader in;
     	private MsgHandle mh;
-    	public WatchDog(BufferedReader vin,MsgHandle vmh){
+    	private Socket skt;
+    	public WatchDog(BufferedReader vin,MsgHandle vmh,Socket socket){
     		in=vin;
     		mh=vmh;
+    		skt=socket;
     	}
     	@Override
     	public void run(){
     		String s=null;
     		if(in!=null)
 	    		while(true){
+	    			if(!socket.isConnected()){
+	    				closeConnection();
+	    				break;
+	    			}
 	    			try{
 	    				s=in.readLine();
-	    			}catch(IOException e){
+	    				if(s==null){
+	    					closeConnection();
+	    					break;
+	    				}
+	    			}catch(Exception e){
 	    				s=null;
-	    				logger.log(Level.SEVERE, null, e);
+	    				closeConnection();	    				
 	    				break;
 	    			}
 	    			mh.handleMsg(s);
 	    		}
     	}
+    	private void closeConnection(){
+    		ZLog.info("");
+    		try{
+				skt.close();
+				ZLog.info("@Server.WatchDog.closeConnection:: client "+skt.getInetAddress()+":"+skt.getPort()+" disconnected.");
+			}catch(Exception ee){
+				ZLog.error("@Server.WatchDog.closeConnection:: nani? cannot close socket!");
+			}
+    	}
     }
-    class WelcomeService extends Thread{
+    
+    class WelcomeService extends Thread{	// accept socket connect and add a dog to handle
     	List<WatchDog> dogs=new ArrayList();
         @Override
         public void run(){
@@ -63,8 +84,9 @@ public class Server implements MsgHandle{
                      out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())), true);
                 } catch (IOException ex) {
                     logger.log(Level.SEVERE, null, ex);
+                    continue;
                 }
-                WatchDog d=new WatchDog(in,self);
+                WatchDog d=new WatchDog(in,self,socket);
                 dogs.add(d);
                 d.start();
             }
@@ -84,7 +106,7 @@ public class Server implements MsgHandle{
         this.isConnected = false;
         callbacks = new ArrayList();
         ss = new ServerSocket(port);
-        logger.info("Server create @ " + port);
+        ZLog.info("Server create @ " + port);
     }
 
     public void addNewTaskArriveCallback(ServerCallback nta){
@@ -136,7 +158,7 @@ public class Server implements MsgHandle{
     }
     
     public void handleMsg(String s){
-    	if(s==null)return;
+    	if(s==null||s=="")return;
     	logger.info("handleMsg: "+s);
     	if (s.contains("addNode")){//control command
             try{
@@ -145,19 +167,16 @@ public class Server implements MsgHandle{
             		logger.info("invalid command: "+s);
             		return;
             	}
-                String ip = s.split("[ ]")[1];
-                int port = Integer.parseInt(s.split("[ ]")[2]);
-                String name = "";
-                if (s.split("[ ]").length > 3){
-                    name = s.split("[ ]")[3];
-                }
+                String ip = ary[1];
+                int port = Integer.parseInt(ary[2]);
+                String name = ""+ip;
+                if (ary.length > 3) name = ary[3];
                 for (ServerCallback nta : callbacks) nta.addNode(ip, port, name);
             }catch(Exception e){
                 logger.log(Level.SEVERE, null, e);
             }
             return;
-        }
-    	{//task dispatch
+        }else{					//task dispatch
             Task task = new Task(s);
             for (ServerCallback nta : callbacks) nta.arrive(task);
         }

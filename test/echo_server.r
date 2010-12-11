@@ -1,8 +1,11 @@
+#!/usr/local/bin/rebol2
+
 REBOL [Title: "Echo Server" Author: "Jerrysnow"]
-;!rebol2
 print "A TCP Echo Server by Jerrysnow"
-port: make integer! ask "port:"
-listen: open/no-wait tcp://:5009
+port: make integer! ask "port: "
+print join "hosting at " port
+addr: make url! join "tcp://:" port
+listen: open/no-wait addr
 
 clients: make block! [ ]
 forever [
@@ -20,8 +23,9 @@ forever [
 		port: first client
 		input: copy port
 		if not equal? none input [
-			foreach k input [
-				append port k
+			if greater? length? input 0 [
+				append port input
+				print join "send: " input
 			]
 			if not equal? port "" [
 				client: make block! [ ]

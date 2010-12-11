@@ -11,6 +11,7 @@ import java.util.logging.Logger;
 import mathmu.conf.Config;
 import mathmu.data.Task;
 import mathmu.interf.*;
+import mathmu.util.ZLog;
 
 public class Core implements ServerCallback, ClientCallback{
     private static Logger logger = Logger.getLogger(Core.class.getName());
@@ -97,9 +98,18 @@ public class Core implements ServerCallback, ClientCallback{
             Logger.getLogger(Core.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
+    
+    public void removeNode(Client c){
+    	this.clientList.remove(c);
+    	ZLog.info("@Core.removeNode:: calc Node "+c.getName()+" removed");
+    }
 
     public void taskFinish(Task task) {
-        logger.info("Task finish : " + task.getId() + " s:" + task.getExp());
+        logger.info("@Core.taskFinish:: Task finish : " + task.getId() + " s:" + task.getExp());
+        if(server==null){
+        	ZLog.error("@Core.taskFinish:: seems you are too early, our server is not there");
+        	return;
+        }
         if (server.sendResponse(task.getExp())){
             for (Task t : doingList) if (t.getId() == task.getId()) {
                 doingList.remove(t);
@@ -110,7 +120,7 @@ public class Core implements ServerCallback, ClientCallback{
 
     public void start(){
         startClients();
-        startServer();        
+        startServer();
     }
 
     public void end(){
