@@ -110,11 +110,13 @@ public class Core implements ServerCallback, ClientCallback{
         	ZLog.error("@Core.taskFinish:: seems you are too early, our server is not there");
         	return;
         }
-        if (server.sendResponse(task.getExp())){
+        if (server.sendResponse(task)){
             for (Task t : doingList) if (t.getId() == task.getId()) {
                 doingList.remove(t);
                 return;
             }
+        }else{
+        	ZLog.error("@Core.taskFinish:: send Response failed!");
         }
     }
 

@@ -9,6 +9,7 @@ import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -23,32 +24,34 @@ public class Server implements MsgHandle{
     private int listenPort = -1;
     private List<ServerCallback> callbacks;
     private WelcomeService runner;
-    private boolean isConnected;
     private PrintWriter out;
     private BufferedReader in;
     private Socket socket;
     private Server self=this;
+    private HashMap<Long,PrintWriter> map=new HashMap();
     
     class WatchDog extends Thread{
-    	private BufferedReader in;
-    	private MsgHandle mh;
-    	private Socket skt;
-    	public WatchDog(BufferedReader vin,MsgHandle vmh,Socket socket){
-    		in=vin;
-    		mh=vmh;
-    		skt=socket;
+    	private BufferedReader win;
+    	private PrintWriter wout;
+    	private MsgHandle wmh;
+    	private Socket wskt;
+    	public WatchDog(BufferedReader vin,PrintWriter vout,MsgHandle vmh,Socket vsocket){
+    		win=vin;
+    		wout=vout;
+    		wmh=vmh;
+    		wskt=vsocket;
     	}
     	@Override
     	public void run(){
     		String s=null;
-    		if(in!=null)
+    		if(win!=null)
 	    		while(true){
-	    			if(!socket.isConnected()){
+	    			if(!wskt.isConnected()){
 	    				closeConnection();
 	    				break;
 	    			}
 	    			try{
-	    				s=in.readLine();
+	    				s=win.readLine();
 	    				if(s==null){
 	    					closeConnection();
 	    					break;
@@ -58,14 +61,14 @@ public class Server implements MsgHandle{
 	    				closeConnection();	    				
 	    				break;
 	    			}
-	    			mh.handleMsg(s);
+	    			wmh.handleMsg(s,wout);
 	    		}
     	}
     	private void closeConnection(){
     		ZLog.info("");
     		try{
-				skt.close();
-				ZLog.info("@Server.WatchDog.closeConnection:: client "+skt.getInetAddress()+":"+skt.getPort()+" disconnected.");
+				wskt.close();
+				ZLog.info("@Server.WatchDog.closeConnection:: client "+wskt.getInetAddress()+":"+wskt.getPort()+" disconnected.");
 			}catch(Exception ee){
 				ZLog.error("@Server.WatchDog.closeConnection:: nani? cannot close socket!");
 			}
@@ -86,7 +89,7 @@ public class Server implements MsgHandle{
                     logger.log(Level.SEVERE, null, ex);
                     continue;
                 }
-                WatchDog d=new WatchDog(in,self,socket);
+                WatchDog d=new WatchDog(in,out,self,socket);
                 dogs.add(d);
                 d.start();
             }
@@ -103,7 +106,6 @@ public class Server implements MsgHandle{
     }
     public Server(int port) throws IOException{
         this.listenPort = port;
-        this.isConnected = false;
         callbacks = new ArrayList();
         ss = new ServerSocket(port);
         ZLog.info("Server create @ " + port);
@@ -148,16 +150,17 @@ public class Server implements MsgHandle{
         return true;
     }
 
-    public boolean sendResponse(String ret){
-        if (this.isConnected && out != null){
-            out.println(ret);
-            out.flush();
+    public boolean sendResponse(Task t){
+    	PrintWriter pw=map.get(t.getId());
+        if (pw != null){
+            pw.println(t.getExp());
+            pw.flush();
             return true;
         }
         return false;
     }
     
-    public void handleMsg(String s){
+    public void handleMsg(String s,PrintWriter ret){
     	if(s==null||s=="")return;
     	logger.info("handleMsg: "+s);
     	if (s.contains("addNode")){//control command
@@ -178,6 +181,7 @@ public class Server implements MsgHandle{
             return;
         }else{					//task dispatch
             Task task = new Task(s);
+            map.put(task.getId(), ret);
             for (ServerCallback nta : callbacks) nta.arrive(task);
         }
     }

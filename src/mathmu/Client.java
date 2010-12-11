@@ -61,9 +61,9 @@ public class Client {
                     }
                     Task task = new Task(recv);
                     task.setId(taskID);
-                    isTasking = false;
                     if(callbacks==null)ZLog.error("@Client.Runner.run::callbacks null");
                     else for (ClientCallback ntf : callbacks) ntf.taskFinish(task);
+                    isTasking = false;
                 }
             } catch (IOException ex) {
                 suicide();

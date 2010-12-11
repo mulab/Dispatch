@@ -18,3 +18,5 @@ public class Config {
 
     public static int TASKQUEUE_CAPACITY = 10000;
 }
+
+// addNode 127.0.0.1 5009 node1
