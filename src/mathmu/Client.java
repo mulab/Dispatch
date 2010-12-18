@@ -49,6 +49,11 @@ public class Client {
             	suicide();
             	return;
             }
+            if(ownerID!=-1){
+        		Task t=new Task("client "+addr.toString()+":"+port+" connected",ownerID);
+        		for (ClientCallback ntf : callbacks) ntf.taskFinish(t);
+        		ownerID=new Long(-1);
+        	}
             try{
                 ZLog.info("Client connected @" + addr.getHostAddress() + ":" + port);
                 in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -60,11 +65,14 @@ public class Client {
                     	suicide();
                     	break;
                     }
+                    if(ownerID==-1)continue;
                     Task task = new Task(recv, ownerID);
                     task.setId(taskID);
                     if(callbacks==null)ZLog.error("@Client.Runner.run::callbacks null");
                     else for (ClientCallback ntf : callbacks) ntf.taskFinish(task);
                     isTasking = false;
+                    ownerID=new Long(-1);
+                    taskID=new Long(-1);
                 }
             } catch (IOException ex) {
                 suicide();
@@ -75,6 +83,14 @@ public class Client {
     public String getName(){
         return this.name+":"+port;
     }
+    
+    public String getIP(){
+    	return addr.getHostAddress();
+    }
+    
+    public int getPort(){
+    	return this.port;
+    }
 
     public Client(String ip, int port, String name) throws UnknownHostException {
         this.name = name;                
@@ -82,23 +98,42 @@ public class Client {
         isTasking = false;
         this.port = port;
         addr = InetAddress.getByName(ip);
-        runner = new Runner();
+    }
+    
+    public Client(String ip, int port, String name, Long taskOwner) throws UnknownHostException {
+        this.name = name;                
+        callbacks = new ArrayList();
+        isTasking = false;
+        this.port = port;
+        this.ownerID=taskOwner;
+        addr = InetAddress.getByName(ip);
+    }
+    
+    public void startClient(){
+    	runner = new Runner();
         runner.start();
     }
     
+    public boolean disconnect(){
+    	if(socket!=null){
+    		try{
+        		socket.close();
+        		ZLog.info("@Client.suicide:: client "+addr.toString()+":"+port+" closed");
+        	}catch(Exception e){
+        		ZLog.error("@Client.suicide::What? Even suicide is throwing an exception!!!");
+        		return false;
+        	}
+    	}
+    	return true;
+    }
+    
     public void suicide(){
-    	if(socket==null){
-    		ZLog.error("@Client.suicide:: socket null, how to suicide?");
-    		for (ClientCallback ntf : callbacks) ntf.removeNode(this);
-    		return;
+    	disconnect();
+    	if(ownerID!=-1){
+    		Task t=new Task("client "+addr.toString()+":"+port+" closed",ownerID);
+    		for (ClientCallback ntf : callbacks) ntf.taskFinish(t);
     	}
-    	try{
-    		socket.close();
-    		ZLog.info("@Client.suicide:: client "+addr.toString()+":"+port+" closed");
-    		for (ClientCallback ntf : callbacks) ntf.removeNode(this);
-    	}catch(Exception e){
-    		ZLog.error("@Client.suicide::What? Even suicide is throwing an exception!!!");
-    	}
+    	for (ClientCallback ntf : callbacks) ntf.removeNode(this);
     }
 
     public void addNewTaskFinishCallback(ClientCallback ntf){
@@ -139,5 +174,13 @@ public class Client {
         return false;
     }
 
-
+    public boolean equals(Object o){
+    	Client c = (Client) o;
+    	if (c.getIP().equals(this.getIP()) && c.getPort()==this.getPort()) return true;
+    	return false;
+    }
+    
+    public int hashCode(){
+    	return 0;
+    }
 }

@@ -40,6 +40,7 @@ public class Server{
     		win=vin;
     		wout=vout;
     		wskt=vsocket;
+    		map.put(src, wout);
     	}
     	@Override
     	public void run(){
@@ -66,6 +67,7 @@ public class Server{
     	}
     	private void closeConnection(){
     		try{
+    			map.remove(src);
 				wskt.close();
 				ZLog.info("@Server.WatchDog.closeConnection:: client "+wskt.getInetAddress()+":"+wskt.getPort()+" disconnected.");
 			}catch(Exception ee){
@@ -76,27 +78,8 @@ public class Server{
     	private void handleMsg(String s){
         	if(s==null||s=="")return;
         	ZLog.info("\n\n@Server.WatchDog.handleMsg: "+s);
-        	if (s.contains("addNode")){//control command
-                try{
-                	String[]ary=s.split("[ ]");
-                	if(ary.length<3){
-                		logger.info("invalid command: "+s);
-                		return;
-                	}
-                    String ip = ary[1];
-                    int port = Integer.parseInt(ary[2]);
-                    String name = ""+ip;
-                    if (ary.length > 3) name = ary[3];
-                    for (ServerCallback nta : callbacks) nta.addNode(ip, port, name);
-                }catch(Exception e){
-                    logger.log(Level.SEVERE, null, e);
-                }
-                return;
-            }else{					//task dispatch
-                Task task = new Task(s,src);
-                map.put(src, wout);
-                for (ServerCallback nta : callbacks) nta.arrive(task);
-            }
+        	Task task = new Task(s,src);
+            for (ServerCallback nta : callbacks) nta.arrive(task);        	
         }
     }
     

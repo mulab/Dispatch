@@ -15,6 +15,7 @@ import java.util.logging.Logger;
 import javax.swing.Timer;
 
 import mathmu.conf.Config;
+import mathmu.conf.Const;
 import mathmu.data.Task;
 import mathmu.interf.*;
 import mathmu.util.ZLog;
@@ -61,6 +62,7 @@ public class Core implements ServerCallback, ClientCallback, ActionListener{
         for (String ip : Config.ClientIPList){
             try {
                 Client c = new Client(ip, Config.ClientSendPort, ip);
+                c.startClient();
                 c.addNewTaskFinishCallback(this);
                 //if (c.isConnected()) {
                     ret ++;
@@ -80,9 +82,58 @@ public class Core implements ServerCallback, ClientCallback, ActionListener{
     }
 
     public synchronized void arrange(){
-        if (waitList.isEmpty()) return;
-        
+        if (waitList.isEmpty()) return;        
         Task t=waitList.peek();
+        String s=t.getExp();
+        
+    	if (s.toLowerCase().contains("node")){//control command
+            try{
+            	String[]ary=s.split("[ ]");
+            	if(ary.length<3){
+            		logger.info("invalid command: "+s);
+            		waitList.poll();
+            		return;
+            	}
+            	String op = ary[1];
+            	String ip = ary[2];
+            	int port=Config.ClientSendPort;
+            	if(ary.length>3){
+            		port = Integer.parseInt(ary[3]);
+            	}
+                String name = ""+ip;
+                if (ary.length>4) name = ary[4];
+                
+            	if(Const.NODE_ADD_SET.contains(op.toLowerCase())){
+            		addNodeWithOwner(ip, port, name, t.getOwner());
+            	}else if(Const.NODE_RM_SET.contains(op.toLowerCase())){
+            		Client toRm = new Client(ip,port,ip);
+            		String resp;
+            		int toRmIdx=clientList.indexOf(toRm);	
+            		if(toRmIdx >= 0){
+            			clientList.get(toRmIdx).disconnect();
+            			clientList.remove(toRmIdx);
+            			resp="node "+ip+" removed";
+            		}
+            		else
+            			resp="node "+ip+" not removed";
+            		taskFinish(new Task(resp,t.getOwner()));
+            	}else{
+            		taskFinish(new Task(Const.NotSupportedCommand,t.getOwner()));
+            	}
+            }catch(Exception e){
+                logger.log(Level.SEVERE, null, e);
+            }
+            doingList.add(waitList.poll());
+            return;
+        }
+        
+    	// if no calc node available
+    	if(clientList.isEmpty()){
+    		taskFinish(new Task(Const.NoCalcNodeAvailable,t.getOwner()));
+    		waitList.poll();
+    		return;
+    	}
+        
         Client old=contextMap.get(t.getOwner());
         if(old==null || !clientList.contains(old)){	// no privious route or the old is dead
         	for (Client c : clientList) if (c.isFree()){
@@ -107,20 +158,39 @@ public class Core implements ServerCallback, ClientCallback, ActionListener{
 //        arrange();
     }
 
-    public void addNode(String ip, int port, String name){
+    public boolean addNode(String ip, int port, String name){
         Client c;
         try {
             c = new Client(ip, port, name);
+            c.startClient();
             c.addNewTaskFinishCallback(this);
             this.clientList.add(c);
         } catch (UnknownHostException ex) {
             Logger.getLogger(Core.class.getName()).log(Level.SEVERE, null, ex);
+            return false;
         }
+        return true;
+    }
+    
+    public boolean addNodeWithOwner(String ip, int port, String name, Long owner){
+        Client c;
+        try {
+            c = new Client(ip, port, name,owner);
+            c.startClient();
+            c.addNewTaskFinishCallback(this);
+            this.clientList.add(c);
+        } catch (UnknownHostException ex) {
+            Logger.getLogger(Core.class.getName()).log(Level.SEVERE, null, ex);
+            return false;
+        }
+        return true;
     }
     
     public void removeNode(Client c){
-    	this.clientList.remove(c);
-    	ZLog.info("@Core.removeNode:: calc Node "+c.getName()+" removed");
+    	if(clientList.contains(c)){
+	    	this.clientList.remove(c);
+	    	ZLog.info("@Core.removeNode:: calc Node "+c.getName()+" removed");
+    	}
     }
 
     public synchronized void taskFinish(Task task) {
