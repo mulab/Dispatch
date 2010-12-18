@@ -6,6 +6,8 @@ import java.io.InputStreamReader;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import mathmu.conf.Config;
+
 /**
  *
  * @author XiaoR
@@ -13,16 +15,29 @@ import java.util.logging.Logger;
 public class Main {
 
     public static void main(String[] args) {
-    	if(args.length>0) System.out.println(args[0]);
+    	if(args.length>0){
+    		parseOption(args);
+    	}
         Core core = new Core();
         core.start();
-        try {
-            BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
-            in.readLine();
-        } catch (IOException ex) {
-            Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
-        }
     }
+    
+    public static void parseOption(String args[]){
+	    for (int i = 0; i < args.length; i++) {
+			if (args[i].equals("-h")) {
+				System.out.print(usage());
+			} else if (args[i].equals("-p")) {
+				Config.ServerListenPort=Integer.parseInt(args[++i]);
+			}
+		}
+    }
+
+    private static String usage() {
+		return ("\n"
+				+ "Usage:  java -jar [-h] [-p portNumber]"
+				+ "\n");
+	}
+
     
     public static void parseConfig(){
     	

@@ -85,7 +85,6 @@ public class Core implements ServerCallback, ClientCallback, ActionListener{
         if (waitList.isEmpty()) return;        
         Task t=waitList.peek();
         String s=t.getExp();
-        
     	if (s.toLowerCase().contains("node")){//control command
             try{
             	String[]ary=s.split("[ ]");
@@ -108,10 +107,15 @@ public class Core implements ServerCallback, ClientCallback, ActionListener{
             	}else if(Const.NODE_RM_SET.contains(op.toLowerCase())){
             		Client toRm = new Client(ip,port,ip);
             		String resp;
-            		int toRmIdx=clientList.indexOf(toRm);	
+            		int toRmIdx=clientList.indexOf(toRm);            		
             		if(toRmIdx >= 0){
             			clientList.get(toRmIdx).disconnect();
             			clientList.remove(toRmIdx);
+            			for(Long k:contextMap.keySet()){
+            	    		if(contextMap.get(k).equals(toRm)){
+            	    			contextMap.remove(k);
+            	    		}
+            	    	}
             			resp="node "+ip+" removed";
             		}
             		else
@@ -126,16 +130,16 @@ public class Core implements ServerCallback, ClientCallback, ActionListener{
             doingList.add(waitList.poll());
             return;
         }
-        
     	// if no calc node available
     	if(clientList.isEmpty()){
     		taskFinish(new Task(Const.NoCalcNodeAvailable,t.getOwner()));
     		waitList.poll();
     		return;
     	}
-        
+    	
         Client old=contextMap.get(t.getOwner());
-        if(old==null || !clientList.contains(old)){	// no privious route or the old is dead
+        if(old==null || !clientList.contains(old)){	// no previous route or the old is dead
+        	ZLog.info("arrange1:   "+s);
         	for (Client c : clientList) if (c.isFree()){
                 if (c.sendNewTask(t)) {
                 	contextMap.put(t.getOwner(), c);
@@ -145,8 +149,10 @@ public class Core implements ServerCallback, ClientCallback, ActionListener{
                 break;
             }
         }else if(old.isFree()==false){	// there exists previous route, but busy
+        	ZLog.info("arrange2:   "+s);
         	waitList.add(waitList.poll());
         }else{			// there exists previous route, and free!
+        	ZLog.info("arrange3:   "+s);
     		old.sendNewTask(t);
     		doingList.add(waitList.poll());
         }
@@ -189,6 +195,11 @@ public class Core implements ServerCallback, ClientCallback, ActionListener{
     public void removeNode(Client c){
     	if(clientList.contains(c)){
 	    	this.clientList.remove(c);
+	    	for(Long k:contextMap.keySet()){
+	    		if(contextMap.get(k).equals(c)){
+	    			contextMap.remove(k);
+	    		}
+	    	}
 	    	ZLog.info("@Core.removeNode:: calc Node "+c.getName()+" removed");
     	}
     }

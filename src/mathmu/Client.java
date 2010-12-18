@@ -43,12 +43,12 @@ public class Client {
         public void run(){
             try {
             	ZLog.info("@Client.Runner:: trying to connect to " + addr.getHostAddress() + ":" + port);
-                socket = new Socket(addr, port);
+                socket = new Socket(addr, port);                
             }catch(IOException e){
             	ZLog.error("@Client.Runner:: cannot connect to " + addr.getHostAddress() + ":" + port);
             	suicide();
             	return;
-            }
+            }            
             if(ownerID!=-1){
         		Task t=new Task("client "+addr.toString()+":"+port+" connected",ownerID);
         		for (ClientCallback ntf : callbacks) ntf.taskFinish(t);
@@ -75,7 +75,7 @@ public class Client {
                     taskID=new Long(-1);
                 }
             } catch (IOException ex) {
-                suicide();
+
             }
         }
     }
@@ -115,6 +115,10 @@ public class Client {
     }
     
     public boolean disconnect(){
+    	if(runner!=null && runner.isAlive()){
+    		runner.interrupt();
+    		runner=null;
+    	}
     	if(socket!=null){
     		try{
         		socket.close();
@@ -162,6 +166,7 @@ public class Client {
     }
     
     public boolean sendNewTask(Task task){
+    	ZLog.info(""+isConnected()+" "+(out==null));
         if (isConnected() && out != null) {
             out.println(task.getExp());
             out.flush();

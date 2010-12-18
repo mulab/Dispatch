@@ -10,9 +10,9 @@ public class Config {
     public static int CORE_INTERVAL = 10;
     public static List<String> ClientIPList = new ArrayList();
     static{    	
-        ClientIPList.add("10.0.10.3");
-        ClientIPList.add("10.0.10.4");
-        ClientIPList.add("10.0.10.5");
+//        ClientIPList.add("10.0.10.3");
+//        ClientIPList.add("10.0.10.4");
+//        ClientIPList.add("10.0.10.5");
     	ClientIPList.add("127.0.0.1");
     }
 
